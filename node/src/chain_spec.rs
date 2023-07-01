@@ -34,6 +34,13 @@ pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Pu
 
 type AccountPublic = <Signature as Verify>::Signer;
 
+fn session_keys(
+	babe: BabeId,
+	grandpa: GrandpaId,
+	im_online: ImOnlineId,
+) -> SessionKeys {
+	SessionKeys { babe, grandpa, im_online }
+}
 /// Generate an account ID from seed.
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
@@ -42,29 +49,17 @@ where
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
 
-fn session_keys(
-	babe: BabeId,
-	grandpa: GrandpaId,
-	im_online: ImOnlineId,
-) -> SessionKeys {
-	SessionKeys { babe, grandpa, im_online }
+/// Generate an Babe authority key.
+pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
+	(
+		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", s)),
+		get_account_id_from_seed::<sr25519::Public>(s),
+		get_from_seed::<BabeId>(s),
+		get_from_seed::<GrandpaId>(s),
+		get_from_seed::<ImOnlineId>(s),
+	)
 }
 
-/// Generate an Babe authority key.
-// pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
-// 	(
-// 		get_account_id_from_seed::<sr25519::Public>(&format!("{}//stash", s)),
-// 		get_account_id_from_seed::<sr25519::Public>(s),
-// 		get_from_seed::<BabeId>(s),
-// 		get_from_seed::<GrandpaId>(s),
-// 		get_from_seed::<ImOnlineId>(s),
-// 	)
-// }
-
-/// Generate an Aura authority key.
-// pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
-// 	(get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
-// }
 
 pub fn development_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
