@@ -67,7 +67,8 @@ type FullGrandpaBlockImport =
 /// Builds a new service for a full client.
 pub fn new_full(config: Configuration, cli: Cli) -> Result<TaskManager, ServiceError> {
 	let database_source = config.database.clone();
-	let task_manager = new_full_base(config, cli.no_hardware_benchmarks, |_, _| ())
+
+	let task_manager = new_full_base(config, cli.no_hardware_benchmarks, |_, _| (),cli.eth)
 		.map(|NewFullBase { task_manager, .. }| task_manager)?;
 
 	sc_storage_monitor::StorageMonitorService::try_spawn(
@@ -104,6 +105,7 @@ pub fn new_full_base(
 		&sc_consensus_babe::BabeBlockImport<Block, FullClient, FullGrandpaBlockImport>,
 		&sc_consensus_babe::BabeLink<Block>,
 	),
+	eth_config: EthConfiguration,
 ) -> Result<NewFullBase, ServiceError> {
 	let hwbench = (!disable_hardware_benchmarks)
 		.then_some(config.database.path().map(|database_path| {
@@ -121,7 +123,7 @@ pub fn new_full_base(
 		select_chain,
 		transaction_pool,
 		other: (rpc_builder, import_setup, rpc_setup, mut telemetry),
-	} = new_partial(&config)?;
+	} = new_partial(&config,eth_config)?;
 
 	let shared_voter_state = rpc_setup;
 	let grandpa_protocol_name = sc_consensus_grandpa::protocol_standard_name(
@@ -429,6 +431,32 @@ pub fn new_partial(
 	let pubsub_notification_sinks = Arc::new(pubsub_notification_sinks);
 	
 	let import_setup = (block_import, grandpa_link, babe_link);
+
+	let eth_rpc_params = crate::rpc::EthDeps {
+		client: client.clone(),
+		pool: transaction_pool.clone(),
+		graph: transaction_pool.pool().clone(),
+		converter: Some(TransactionConverter),
+		is_authority: config.role.is_authority(),
+		enable_dev_signer: eth_config.enable_dev_signer,
+		network: network.clone(),
+		sync: sync_service.clone(),
+		frontier_backend: frontier_backend.clone(),
+		overrides: overrides.clone(),
+		block_data_cache: Arc::new(fc_rpc::EthBlockDataCacheTask::new(
+			task_manager.spawn_handle(),
+			overrides.clone(),
+			eth_config.eth_log_block_cache,
+			eth_config.eth_statuses_cache,
+			prometheus_registry.clone(),
+		)),
+		filter_pool: filter_pool.clone(),
+		max_past_logs: eth_config.max_past_logs,
+		fee_history_cache: fee_history_cache.clone(),
+		fee_history_cache_limit,
+		execute_gas_limit_multiplier: eth_config.execute_gas_limit_multiplier,
+		forced_parent_hashes: None,
+	};
 
 	let (rpc_extensions_builder, rpc_setup) = {
 		let (_, grandpa_link, babe_link) = &import_setup;

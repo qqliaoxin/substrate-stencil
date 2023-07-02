@@ -42,13 +42,13 @@ fn session_keys(
 	SessionKeys { babe, grandpa, im_online }
 }
 /// Generate an account ID from seed.
+#[allow(dead_code)]
 pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
 where
 	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
 {
 	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
 }
-
 /// Generate an Babe authority key.
 pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, BabeId, GrandpaId, ImOnlineId) {
 	(
@@ -59,7 +59,6 @@ pub fn authority_keys_from_seed(s: &str) -> (AccountId, AccountId, BabeId, Grand
 		get_from_seed::<ImOnlineId>(s),
 	)
 }
-
 
 pub fn development_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
@@ -77,7 +76,7 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				vec![authority_keys_from_seed("Alice")],
 				vec![],
 				// Sudo account
-				AccountId::from(hex!("f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac")),
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 
 				// Pre-funded accounts
 				vec![
@@ -119,7 +118,7 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 				vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
 				vec![],
 				// Sudo account
-				AccountId::from(hex!("f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac")),
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				// Pre-funded accounts
 				vec![
 					AccountId::from(hex!("f24FF3a9CF04c71Dbc94D0b566f7A27B94566cac")), // Alith
